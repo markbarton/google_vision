@@ -1,0 +1,141 @@
+<!doctype html>
+<html>
+
+<head>
+  <title>Egghead - Google Vision Experiment</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"> <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <style>
+    .colorBlock {
+      height: 100px;
+      width: 100px;
+      margin: 5px;
+      border: 3px solid black;
+      float: left;
+      text-align: center;
+    }
+    #img-thumb{
+      max-width: 50%;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="row">
+     <div class="col-sm">
+        <h1>Egghead Google Vision - Demo</h1>
+     </div> 
+    </div>
+    
+    <form role="form" class="form" onsubmit="return false;">
+      <div class="form-group">
+        <label for="file">File</label>
+        <input id="file" type="file" class="form-control" accept=".jpg,.jpeg,.gif,.png" />
+      </div>
+      <button id="color_detect" type="button" class="btn btn-primary">Get Colours</button>
+      <button id="label_detect" type="button" class="btn btn-primary">Get Labels</button>
+      <button id="text_detect" type="button" class="btn btn-primary">Get Text</button>
+    </form>
+
+    <div class="row">
+      <div class="col-sm" id="img-thumb"></div>
+      <div class="col-sm" id="output"></div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const output = document.getElementById('output');
+
+      document.getElementById('file').onchange = function () {
+        previewImage();
+      }
+
+      document.getElementById('color_detect').onclick = function () {
+        output.innerHTML = '';
+        const data = new FormData();
+        data.append('file', document.getElementById('file').files[0]);
+        axios.post('/color', data)
+          .then(function (res) {
+            // Sort Colors
+            const colors = res.data.sort((a, b) => b.pixelFraction - a.pixelFraction);
+            colors.forEach(color => output.appendChild(build_color_box(color)));
+          })
+          .catch(function (err) {
+            console.log(err);
+          });
+      };
+
+      // Add text detection
+      document.getElementById('text_detect').onclick = function () {
+        output.innerHTML = '';
+        const data = new FormData();
+        data.append('file', document.getElementById('file').files[0]);
+        axios.post('/text', data)
+          .then(function (res) {
+            // The first result will contain the complete Text
+            output.innerText = res.data[0].description;
+          })
+          .catch(function (err) {
+            console.log(err);
+          });
+      };
+
+      // Add web detection
+      document.getElementById('label_detect').onclick = function () {
+        output.innerHTML = '';
+        const data = new FormData();
+        data.append('file', document.getElementById('file').files[0]);
+        axios.post('/label', data)
+          .then(function (res) {
+            // Sort Scores
+            const labels = res.data.sort((a, b) => b.score - a.score);
+            const list_element = document.createElement('ul');
+            list_element.className = 'list-group';
+            output.appendChild(list_element);
+            labels.forEach(label => output.appendChild(build_list_item(label)));
+          })
+          .catch(function (err) {
+            console.log(err);
+          });
+      };
+    })();
+
+    function build_color_box(color_data) {
+      const new_div = document.createElement('div');
+      new_div.style.backgroundColor = `rgba(${color_data.color.red},${color_data.color.green},${color_data.color.blue},1)`
+      new_div.className = 'colorBlock';
+      new_div.innerText = `${color_data.pixelFraction.toFixed(2)}
+      R${color_data.color.red} G${color_data.color.green} B${color_data.color.blue}`;
+      return new_div;
+    }
+
+    function build_list_item(label_data) {
+      const new_li = document.createElement('li');
+      new_li.className = 'list-group-item list-group-item-info';
+      new_li.innerText = `${label_data.description} (${label_data.score.toFixed(2)})`
+      return new_li;
+    }
+
+    function previewImage() {
+      const input = document.getElementById('file');
+      if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          const img = document.createElement('img');
+          img.src = e.target.result;
+          img.className = 'img-thumbnail';
+          const img_holder = document.getElementById('img-thumb');
+          // blank first
+          img_holder.innerHTML = '';
+          img_holder.appendChild(img);
+        }
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+  </script>
+
+</body>
+
+</html>
